@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小说阅读器</title>
+    <style>
+        body {
+            font-family: 'Microsoft YaHei', 'SimSun', sans-serif;
+            line-height: 1.7;
+            color: #333;
+            background-color: #f5f5f5;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            min-height: 100vh;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 20px 0;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 20px;
+        }
+        
+        .header h1 {
+            margin: 0;
+            color: #333;
+            font-size: 24px;
+        }
+        
+        .header .author {
+            color: #666;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+        
+        .chapter-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #eee;
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #fafafa;
+        }
+        
+        .chapter-list h3 {
+            margin-top: 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .chapter-list ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .chapter-list li {
+            padding: 8px 0;
+            border-bottom: 1px dashed #eee;
+            cursor: pointer;
+        }
+        
+        .chapter-list li:hover {
+            color: #1a73e8;
+        }
+        
+        .chapter-list li.active {
+            color: #1a73e8;
+            font-weight: bold;
+        }
+        
+        .content {
+            padding: 20px;
+            background-color: #fff;
+            border: 1px solid #eee;
+        }
+        
+        .content h2 {
+            text-align: center;
+            margin-top: 0;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .content p {
+            text-indent: 2em;
+            margin: 0.8em 0;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: space-between;
+            margin: 20px 0;
+        }
+        
+        .controls button {
+            padding: 8px 15px;
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .controls button:hover {
+            background-color: #0d62c9;
+        }
+        
+        .controls button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .settings {
+            margin: 20px 0;
+            padding: 10px;
+            background-color: #fafafa;
+            border: 1px solid #eee;
+        }
+        
+        .settings h3 {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        
+        .settings-row {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .settings-row label {
+            margin-right: 10px;
+            min-width: 80px;
+        }
+        
+        .settings-row select, .settings-row input {
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .file-input {
+            margin: 20px 0;
+        }
+        
+        .file-input input {
+            display: none;
+        }
+        
+        .file-input label {
+            display: inline-block;
+            padding: 8px 15px;
+            background-color: #4CAF50;
+            color: white;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        
+        .file-input label:hover {
+            background-color: #45a049;
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            color: #666;
+        }
+        
+        .error {
+            color: #d32f2f;
+            padding: 10px;
+            background-color: #ffebee;
+            border: 1px solid #ffcdd2;
+            margin: 10px 0;
+        }
+        
+        /* 响应式设计 */
+        @media (max-width: 600px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .content {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 id="novel-title">小说阅读器</h1>
+            <div class="author" id="novel-author">请选择小说文件</div>
+        </div>
+        
+        <div class="file-input">
+            <label for="novel-file">选择小说文件</label>
+            <input type="file" id="novel-file" accept=".txt">
+        </div>
+        
+        <div id="error-message" class="error" style="display: none;"></div>
+        
+        <div class="settings">
+            <h3>阅读设置</h3>
+            <div class="settings-row">
+                <label for="font-size">字体大小:</label>
+                <select id="font-size">
+                    <option value="14px">小</option>
+                    <option value="16px" selected>中</option>
+                    <option value="18px">大</option>
+                    <option value="20px">特大</option>
+                </select>
+            </div>
+            <div class="settings-row">
+                <label for="theme">主题:</label>
+                <select id="theme">
+                    <option value="light" selected>浅色</option>
+                    <option value="dark">深色</option>
+                    <option value="sepia">护眼</option>
+                </select>
+            </div>
+            <div class="settings-row">
+                <label for="line-height">行间距:</label>
+                <select id="line-height">
+                    <option value="1.5">紧凑</option>
+                    <option value="1.7" selected>标准</option>
+                    <option value="2">宽松</option>
+                </select>
+            </div>
+        </div>
+        
+        <div id="chapter-list" class="chapter-list" style="display: none;">
+            <h3>章节列表</h3>
+            <ul id="chapters"></ul>
+        </div>
+        
+        <div class="controls">
+            <button id="prev-chapter" disabled>上一章</button>
+            <button id="toggle-chapter-list">显示章节列表</button>
+            <button id="next-chapter" disabled>下一章</button>
+        </div>
+        
+        <div id="content" class="content">
+            <div id="loading" class="loading" style="display: none;">加载中...</div>
+            <div id="chapter-content">
+                <h2>欢迎使用小说阅读器</h2>
+                <p>这是一个简单的小说阅读器，可以用来阅读通过爬虫下载的TXT格式小说。</p>
+                <p>使用方法：</p>
+                <p>1. 点击"选择小说文件"按钮，选择一个TXT格式的小说文件</p>
+                <p>2. 小说将自动解析为章节，并显示第一章内容</p>
+                <p>3. 使用"上一章"和"下一章"按钮或章节列表进行导航</p>
+                <p>4. 可以调整字体大小、主题和行间距等阅读设置</p>
+                <p>注意：小说文件应该是UTF-8编码的TXT文件，且最好有明确的章节标记</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 全局变量
+        let novelContent = '';
+        let chapters = [];
+        let currentChapterIndex = 0;
+        
+        // DOM元素
+        const novelFile = document.getElementById('novel-file');
+        const novelTitle = document.getElementById('novel-title');
+        const novelAuthor = document.getElementById('novel-author');
+        const chapterList = document.getElementById('chapter-list');
+        const chaptersUl = document.getElementById('chapters');
+        const chapterContent = document.getElementById('chapter-content');
+        const prevChapterBtn = document.getElementById('prev-chapter');
+        const nextChapterBtn = document.getElementById('next-chapter');
+        const toggleChapterListBtn = document.getElementById('toggle-chapter-list');
+        const loading = document.getElementById('loading');
+        const errorMessage = document.getElementById('error-message');
+        const fontSize = document.getElementById('font-size');
+        const theme = document.getElementById('theme');
+        const lineHeight = document.getElementById('line-height');
+        
+        // 事件监听
+        novelFile.addEventListener('change', handleFileSelect);
+        prevChapterBtn.addEventListener('click', goToPrevChapter);
+        nextChapterBtn.addEventListener('click', goToNextChapter);
+        toggleChapterListBtn.addEventListener('click', toggleChapterList);
+        fontSize.addEventListener('change', applySettings);
+        theme.addEventListener('change', applySettings);
+        lineHeight.addEventListener('change', applySettings);
+        
+        // 应用阅读设置
+        function applySettings() {
+            // 应用字体大小
+            chapterContent.style.fontSize = fontSize.value;
+            
+            // 应用行高
+            chapterContent.style.lineHeight = lineHeight.value;
+            
+            // 应用主题
+            const container = document.querySelector('.container');
+            const content = document.querySelector('.content');
+            
+            // 重置样式
+            container.style.backgroundColor = '';
+            container.style.color = '';
+            content.style.backgroundColor = '';
+            content.style.borderColor = '';
+            
+            // 应用选择的主题
+            switch(theme.value) {
+                case 'dark':
+                    container.style.backgroundColor = '#222';
+                    container.style.color = '#eee';
+                    content.style.backgroundColor = '#333';
+                    content.style.borderColor = '#444';
+                    break;
+                case 'sepia':
+                    container.style.backgroundColor = '#f4ecd8';
+                    container.style.color = '#5b4636';
+                    content.style.backgroundColor = '#fbf0d9';
+                    content.style.borderColor = '#e8dcb8';
+                    break;
+                default: // light
+                    // 使用默认样式
+                    break;
+            }
+            
+            // 保存设置到本地存储
+            saveSettings();
+        }
+        
+        // 保存设置到本地存储
+        function saveSettings() {
+            const settings = {
+                fontSize: fontSize.value,
+                theme: theme.value,
+                lineHeight: lineHeight.value
+            };
+            localStorage.setItem('novelReaderSettings', JSON.stringify(settings));
+        }
+        
+        // 从本地存储加载设置
+        function loadSettings() {
+            const savedSettings = localStorage.getItem('novelReaderSettings');
+            if (savedSettings) {
+                const settings = JSON.parse(savedSettings);
+                fontSize.value = settings.fontSize || '16px';
+                theme.value = settings.theme || 'light';
+                lineHeight.value = settings.lineHeight || '1.7';
+                applySettings();
+            }
+        }
+        
+        // 处理文件选择
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // 显示加载中
+            loading.style.display = 'block';
+            chapterContent.style.display = 'none';
+            errorMessage.style.display = 'none';
+            
+            const reader = new FileReader();
+            
+            reader.onload = function(e) {
+                try {
+                    novelContent = e.target.result;
+                    parseNovel(novelContent);
+                    loading.style.display = 'none';
+                    chapterContent.style.display = 'block';
+                } catch (error) {
+                    showError('解析小说文件时出错: ' + error.message);
+                }
+            };
+            
+            reader.onerror = function() {
+                showError('读取文件时出错');
+            };
+            
+            reader.readAsText(file, 'UTF-8');
+        }
+        
+        // 解析小说
+        function parseNovel(content) {
+            // 提取小说信息
+            const titleMatch = content.match(/书名：(.+)\n/);
+            const authorMatch = content.match(/作者：(.+)\n/);
+            
+            if (titleMatch && titleMatch[1]) {
+                novelTitle.textContent = titleMatch[1];
+            } else {
+                // 尝试从文件名获取标题
+                const fileName = novelFile.files[0].name;
+                novelTitle.textContent = fileName.replace('.txt', '');
+            }
+            
+            if (authorMatch && authorMatch[1]) {
+                novelAuthor.textContent = authorMatch[1];
+            } else {
+                novelAuthor.textContent = '未知作者';
+            }
+            
+            // 解析章节
+            // 使用正则表达式匹配常见的章节标题格式
+            const chapterRegex = /(?:^|\n)(?:第[\s]*[0-9一二三四五六七八九十百千万]+[\s]*[章节卷集部篇]|[第]?[0-9一二三四五六七八九十百千万]+[\s]*[章节卷集部篇])[^\n]*\n/g;
+            
+            // 查找所有章节标题
+            const chapterTitles = [];
+            let match;
+            while ((match = chapterRegex.exec(content)) !== null) {
+                chapterTitles.push({
+                    title: match[0].trim(),
+                    position: match.index
+                });
+            }
+            
+            // 如果没有找到章节，尝试使用其他分隔符
+            if (chapterTitles.length === 0) {
+                // 尝试使用连续的换行符作为分隔
+                const lines = content.split('\n');
+                let currentPosition = 0;
+                
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (line && (line.length < 30) && !line.startsWith('http')) {
+                        // 假设短行可能是章节标题
+                        chapterTitles.push({
+                            title: line,
+                            position: currentPosition
+                        });
+                    }
+                    currentPosition += lines[i].length + 1; // +1 for the newline
+                }
+            }
+            
+            // 如果仍然没有找到章节，创建一个默认章节
+            if (chapterTitles.length === 0) {
+                chapterTitles.push({
+                    title: '全文',
+                    position: 0
+                });
+            }
+            
+            // 构建章节数组
+            chapters = [];
+            for (let i = 0; i < chapterTitles.length; i++) {
+                const startPos = chapterTitles[i].position;
+                const endPos = (i < chapterTitles.length - 1) ? chapterTitles[i + 1].position : content.length;
+                
+                chapters.push({
+                    title: chapterTitles[i].title,
+                    content: content.substring(startPos, endPos)
+                });
+            }
+            
+            // 填充章节列表
+            populateChapterList();
+            
+            // 显示第一章
+            currentChapterIndex = 0;
+            showChapter(currentChapterIndex);
+            
+            // 启用导航按钮
+            updateNavigationButtons();
+            
+            // 显示章节列表
+            chapterList.style.display = 'block';
+        }
+        
+        // 填充章节列表
+        function populateChapterList() {
+            chaptersUl.innerHTML = '';
+            
+            chapters.forEach((chapter, index) => {
+                const li = document.createElement('li');
+                li.textContent = chapter.title;
+                li.addEventListener('click', () => {
+                    currentChapterIndex = index;
+                    showChapter(currentChapterIndex);
+                    updateNavigationButtons();
+                    // 在移动设备上，点击章节后隐藏章节列表
+                    if (window.innerWidth <= 600) {
+                        chapterList.style.display = 'none';
+                    }
+                });
+                chaptersUl.appendChild(li);
+            });
+        }
+        
+        // 显示章节内容
+        function showChapter(index) {
+            if (index < 0 || index >= chapters.length) return;
+            
+            // 更新当前章节索引
+            currentChapterIndex = index;
+            
+            // 获取章节内容
+            const chapter = chapters[index];
+            
+            // 更新章节内容
+            chapterContent.innerHTML = `<h2>${chapter.title}</h2>`;
+            
+            // 将章节内容按段落分割并添加
+            const paragraphs = chapter.content.split('\n').filter(p => p.trim());
+            paragraphs.forEach(paragraph => {
+                if (paragraph.trim() !== chapter.title.trim()) {
+                    const p = document.createElement('p');
+                    p.textContent = paragraph.trim();
+                    chapterContent.appendChild(p);
+                }
+            });
+            
+            // 更新章节列表中的活动项
+            const chapterItems = chaptersUl.querySelectorAll('li');
+            chapterItems.forEach((item, i) => {
+                if (i === index) {
+                    item.classList.add('active');
+                    // 滚动到当前章节
+                    item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                    item.classList.remove('active');
+                }
+            });
+            
+            // 滚动到页面顶部
+            window.scrollTo(0, 0);
+        }
+        
+        // 上一章
+        function goToPrevChapter() {
+            if (currentChapterIndex > 0) {
+                currentChapterIndex--;
+                showChapter(currentChapterIndex);
+                updateNavigationButtons();
+            }
+        }
+        
+        // 下一章
+        function goToNextChapter() {
+            if (currentChapterIndex < chapters.length - 1) {
+                currentChapterIndex++;
+                showChapter(currentChapterIndex);
+                updateNavigationButtons();
+            }
+        }
+        
+        // 更新导航按钮状态
+        function updateNavigationButtons() {
+            prevChapterBtn.disabled = currentChapterIndex <= 0;
+            nextChapterBtn.disabled = currentChapterIndex >= chapters.length - 1;
+        }
+        
+        // 切换章节列表显示
+        function toggleChapterList() {
+            if (chapterList.style.display === 'none') {
+                chapterList.style.display = 'block';
+                toggleChapterListBtn.textContent = '隐藏章节列表';
+            } else {
+                chapterList.style.display = 'none';
+                toggleChapterListBtn.textContent = '显示章节列表';
+            }
+        }
+        
+        // 显示错误信息
+        function showError(message) {
+            loading.style.display = 'none';
+            errorMessage.textContent = message;
+            errorMessage.style.display = 'block';
+        }
+        
+        // 添加键盘导航
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'ArrowLeft') {
+                goToPrevChapter();
+            } else if (event.key === 'ArrowRight') {
+                goToNextChapter();
+            }
+        });
+        
+        // 初始化
+        function init() {
+            // 加载保存的设置
+            loadSettings();
+            
+            // 初始状态下隐藏章节列表
+            chapterList.style.display = 'none';
+        }
+        
+        // 页面加载完成后初始化
+        window.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
