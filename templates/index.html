@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智能新闻爬虫系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --light-bg: #ecf0f1;
+            --dark-text: #2c3e50;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: var(--dark-text);
+        }
+
+        .navbar {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .navbar-brand {
+            font-weight: bold;
+            color: var(--primary-color) !important;
+            font-size: 1.5rem;
+        }
+
+        .main-container {
+            margin-top: 2rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            border: none;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+            color: white;
+            border-radius: 15px 15px 0 0 !important;
+            border: none;
+            padding: 1.5rem;
+        }
+
+        .card-header h5 {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--secondary-color), var(--primary-color));
+            border: none;
+            border-radius: 25px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+        }
+
+        .btn-success {
+            background: linear-gradient(135deg, var(--success-color), #2ecc71);
+            border: none;
+            border-radius: 25px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, var(--accent-color), #c0392b);
+            border: none;
+            border-radius: 25px;
+            padding: 0.75rem 2rem;
+            font-weight: 600;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        .status-running {
+            background-color: var(--success-color);
+        }
+
+        .status-stopped {
+            background-color: var(--accent-color);
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .stats-card {
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .stats-number {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--secondary-color);
+            display: block;
+        }
+
+        .stats-label {
+            color: var(--dark-text);
+            font-size: 1rem;
+            margin-top: 0.5rem;
+        }
+
+        .news-item {
+            border-left: 4px solid var(--secondary-color);
+            padding: 1rem;
+            margin-bottom: 1rem;
+            background: white;
+            border-radius: 0 10px 10px 0;
+            transition: all 0.3s ease;
+        }
+
+        .news-item:hover {
+            transform: translateX(5px);
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .news-title {
+            font-weight: 600;
+            color: var(--primary-color);
+            margin-bottom: 0.5rem;
+            text-decoration: none;
+        }
+
+        .news-title:hover {
+            color: var(--secondary-color);
+        }
+
+        .news-meta {
+            font-size: 0.9rem;
+            color: #7f8c8d;
+            margin-bottom: 0.5rem;
+        }
+
+        .news-summary {
+            color: var(--dark-text);
+            line-height: 1.6;
+        }
+
+        .sentiment-positive {
+            color: var(--success-color);
+        }
+
+        .sentiment-negative {
+            color: var(--accent-color);
+        }
+
+        .sentiment-neutral {
+            color: #95a5a6;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid var(--secondary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .chart-container {
+            position: relative;
+            height: 300px;
+            margin: 1rem 0;
+        }
+
+        .progress-custom {
+            height: 8px;
+            border-radius: 10px;
+            background-color: #e9ecef;
+        }
+
+        .progress-bar-custom {
+            background: linear-gradient(90deg, var(--secondary-color), var(--success-color));
+            border-radius: 10px;
+        }
+
+        .alert-custom {
+            border: none;
+            border-radius: 10px;
+            padding: 1rem 1.5rem;
+        }
+
+        .footer {
+            background: rgba(44, 62, 80, 0.9);
+            color: white;
+            text-align: center;
+            padding: 2rem 0;
+            margin-top: 3rem;
+        }
+
+        @media (max-width: 768px) {
+            .card {
+                margin-bottom: 1rem;
+            }
+            
+            .stats-number {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-spider me-2"></i>
+                智能新闻爬虫系统
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#dashboard">仪表板</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#crawler">爬虫控制</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#news">新闻展示</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#analytics">数据分析</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container main-container" style="margin-top: 100px;">
+        <!-- 系统状态卡片 -->
+        <div class="row mb-4" id="dashboard">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-tachometer-alt me-2"></i>系统状态</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="stats-card">
+                                    <span class="stats-number" id="totalNews">0</span>
+                                    <div class="stats-label">总新闻数</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stats-card">
+                                    <span class="stats-number" id="avgSentiment">0.0</span>
+                                    <div class="stats-label">平均情感分</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stats-card">
+                                    <span class="stats-number" id="avgWordCount">0</span>
+                                    <div class="stats-label">平均字数</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="stats-card">
+                                    <span class="status-indicator" id="statusIndicator"></span>
+                                    <span id="crawlStatus">未运行</span>
+                                    <div class="stats-label">爬虫状态</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mt-3" id="progressSection" style="display: none;">
+                            <div class="col-12">
+                                <div class="progress progress-custom">
+                                    <div class="progress-bar progress-bar-custom" id="progressBar" role="progressbar" style="width: 0%"></div>
+                                </div>
+                                <small class="text-muted" id="progressText">准备中...</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 爬虫控制面板 -->
+        <div class="row mb-4" id="crawler">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-robot me-2"></i>基础爬虫</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">简单快速的新闻爬取，适合快速获取最新资讯</p>
+                        <div class="mb-3">
+                            <label class="form-label">爬取页数</label>
+                            <input type="number" class="form-control" id="basicPages" value="3" min="1" max="10">
+                        </div>
+                        <button class="btn btn-primary w-100" onclick="startBasicCrawler()">
+                            <i class="fas fa-play me-2"></i>启动基础爬虫
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-cogs me-2"></i>高级爬虫</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted">功能丰富的智能爬虫，包含情感分析和数据可视化</p>
+                        <div class="mb-3">
+                            <label class="form-label">每站新闻数</label>
+                            <input type="number" class="form-control" id="advancedNews" value="50" min="10" max="200">
+                        </div>
+                        <button class="btn btn-success w-100" onclick="startAdvancedCrawler()">
+                            <i class="fas fa-rocket me-2"></i>启动高级爬虫
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 控制按钮 -->
+        <div class="row mb-4">
+            <div class="col-12 text-center">
+                <button class="btn btn-danger me-3" onclick="stopCrawler()">
+                    <i class="fas fa-stop me-2"></i>停止爬虫
+                </button>
+                <button class="btn btn-primary me-3" onclick="refreshData()">
+                    <i class="fas fa-sync-alt me-2"></i>刷新数据
+                </button>
+                <button class="btn btn-info" onclick="exportData()">
+                    <i class="fas fa-download me-2"></i>导出数据
+                </button>
+            </div>
+        </div>
+
+        <!-- 数据分析 -->
+        <div class="row mb-4" id="analytics">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-pie me-2"></i>新闻来源分布</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="sourceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-chart-bar me-2"></i>爬虫类型统计</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="chart-container">
+                            <canvas id="crawlerChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 新闻展示 -->
+        <div class="row mb-4" id="news">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5><i class="fas fa-newspaper me-2"></i>最新新闻</h5>
+                        <div>
+                            <select class="form-select form-select-sm" id="sourceFilter" onchange="filterNews()">
+                                <option value="">所有来源</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="newsContainer">
+                            <div class="loading">
+                                <div class="spinner"></div>
+                                <p>正在加载新闻...</p>
+                            </div>
+                        </div>
+                        <div class="text-center mt-3">
+                            <button class="btn btn-outline-primary" onclick="loadMoreNews()">
+                                <i class="fas fa-plus me-2"></i>加载更多
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 智能新闻爬虫系统. 基于Python Flask + Bootstrap 5 构建</p>
+            <p><i class="fas fa-code me-2"></i>功能包括：多线程爬取、情感分析、数据可视化、实时监控</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+    <script>
+        let currentOffset = 0;
+        let sourceChart = null;
+        let crawlerChart = null;
+        let isLoading = false;
+
+        // 页面加载完成后初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            refreshData();
+            setInterval(updateStatus, 3000); // 每3秒更新状态
+        });
+
+        // 启动基础爬虫
+        function startBasicCrawler() {
+            const pages = document.getElementById('basicPages').value;
+            
+            fetch('/api/start_basic', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    categories: ['news'],
+                    max_pages: parseInt(pages)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                showAlert(data.message, 'success');
+                updateStatus();
+            })
+            .catch(error => {
+                showAlert('启动失败: ' + error.message, 'danger');
+            });
+        }
+
+        // 启动高级爬虫
+        function startAdvancedCrawler() {
+            const maxNews = document.getElementById('advancedNews').value;
+            
+            fetch('/api/start_advanced', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    max_news_per_site: parseInt(maxNews)
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                showAlert(data.message, 'success');
+                updateStatus();
+            })
+            .catch(error => {
+                showAlert('启动失败: ' + error.message, 'danger');
+            });
+        }
+
+        // 停止爬虫
+        function stopCrawler() {
+            fetch('/api/stop', {
+                method: 'POST'
+            })
+            .then(response => response.json())
+            .then(data => {
+                showAlert(data.message, 'info');
+                updateStatus();
+            })
+            .catch(error => {
+                showAlert('停止失败: ' + error.message, 'danger');
+            });
+        }
+
+        // 更新状态
+        function updateStatus() {
+            fetch('/api/status')
+                .then(response => response.json())
+                .then(data => {
+                    const indicator = document.getElementById('statusIndicator');
+                    const status = document.getElementById('crawlStatus');
+                    const progressSection = document.getElementById('progressSection');
+                    
+                    if (data.is_running) {
+                        indicator.className = 'status-indicator status-running';
+                        status.textContent = `运行中 - ${data.current_task || '爬取中'}`;
+                        progressSection.style.display = 'block';
+                        
+                        // 更新进度（模拟）
+                        const progress = Math.min(90, (Date.now() - new Date(data.start_time).getTime()) / 1000 / 60 * 10);
+                        document.getElementById('progressBar').style.width = progress + '%';
+                        document.getElementById('progressText').textContent = `已运行 ${Math.floor((Date.now() - new Date(data.start_time).getTime()) / 1000 / 60)} 分钟`;
+                    } else {
+                        indicator.className = 'status-indicator status-stopped';
+                        status.textContent = '已停止';
+                        progressSection.style.display = 'none';
+                    }
+                    
+                    if (data.errors && data.errors.length > 0) {
+                        showAlert('爬虫出现错误: ' + data.errors[data.errors.length - 1], 'warning');
+                    }
+                })
+                .catch(error => {
+                    console.error('获取状态失败:', error);
+                });
+        }
+
+        // 刷新数据
+        function refreshData() {
+            updateStatistics();
+            loadNews();
+        }
+
+        // 更新统计数据
+        function updateStatistics() {
+            fetch('/api/statistics')
+                .then(response => response.json())
+                .then(data => {
+                    document.getElementById('totalNews').textContent = data.total_news || 0;
+                    document.getElementById('avgSentiment').textContent = (data.avg_sentiment || 0).toFixed(2);
+                    document.getElementById('avgWordCount').textContent = Math.round(data.avg_word_count || 0);
+                    
+                    // 更新图表
+                    updateCharts(data);
+                    
+                    // 更新来源过滤器
+                    updateSourceFilter(data.source_stats || {});
+                })
+                .catch(error => {
+                    console.error('获取统计数据失败:', error);
+                });
+        }
+
+        // 更新图表
+        function updateCharts(data) {
+            // 新闻来源分布图
+            const sourceCtx = document.getElementById('sourceChart').getContext('2d');
+            if (sourceChart) {
+                sourceChart.destroy();
+            }
+            
+            const sourceData = data.source_stats || {};
+            sourceChart = new Chart(sourceCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(sourceData),
+                    datasets: [{
+                        data: Object.values(sourceData),
+                        backgroundColor: [
+                            '#3498db',
+                            '#e74c3c',
+                            '#2ecc71',
+                            '#f39c12',
+                            '#9b59b6',
+                            '#1abc9c'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+
+            // 爬虫类型统计图
+            const crawlerCtx = document.getElementById('crawlerChart').getContext('2d');
+            if (crawlerChart) {
+                crawlerChart.destroy();
+            }
+            
+            const crawlerData = data.crawler_stats || {};
+            crawlerChart = new Chart(crawlerCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(crawlerData).map(key => key === 'basic' ? '基础爬虫' : '高级爬虫'),
+                    datasets: [{
+                        label: '新闻数量',
+                        data: Object.values(crawlerData),
+                        backgroundColor: ['#3498db', '#2ecc71']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        }
+
+        // 更新来源过滤器
+        function updateSourceFilter(sourceStats) {
+            const filter = document.getElementById('sourceFilter');
+            filter.innerHTML = '<option value="">所有来源</option>';
+            
+            Object.keys(sourceStats).forEach(source => {
+                const option = document.createElement('option');
+                option.value = source;
+                option.textContent = `${source} (${sourceStats[source]})`;
+                filter.appendChild(option);
+            });
+        }
+
+        // 加载新闻
+        function loadNews(reset = true) {
+            if (isLoading) return;
+            
+            if (reset) {
+                currentOffset = 0;
+                document.getElementById('newsContainer').innerHTML = '<div class="loading"><div class="spinner"></div><p>正在加载新闻...</p></div>';
+            }
+            
+            isLoading = true;
+            const source = document.getElementById('sourceFilter').value;
+            
+            fetch(`/api/news?limit=20&offset=${currentOffset}&source=${source}`)
+                .then(response => response.json())
+                .then(data => {
+                    displayNews(data, reset);
+                    currentOffset += data.length;
+                    isLoading = false;
+                })
+                .catch(error => {
+                    console.error('加载新闻失败:', error);
+                    isLoading = false;
+                });
+        }
+
+        // 显示新闻
+        function displayNews(newsData, reset = true) {
+            const container = document.getElementById('newsContainer');
+            
+            if (reset) {
+                container.innerHTML = '';
+            }
+            
+            if (newsData.length === 0) {
+                if (reset) {
+                    container.innerHTML = '<div class="text-center text-muted"><i class="fas fa-newspaper fa-3x mb-3"></i><p>暂无新闻数据</p></div>';
+                }
+                return;
+            }
+            
+            newsData.forEach(news => {
+                const newsItem = document.createElement('div');
+                newsItem.className = 'news-item';
+                
+                const sentimentClass = getSentimentClass(news.sentiment_score);
+                const sentimentText = getSentimentText(news.sentiment_score);
+                
+                newsItem.innerHTML = `
+                    <h6><a href="${news.url}" target="_blank" class="news-title">${news.title}</a></h6>
+                    <div class="news-meta">
+                        <i class="fas fa-calendar me-2"></i>${news.crawl_time}
+                        <i class="fas fa-globe ms-3 me-2"></i>${news.source}
+                        <i class="fas fa-robot ms-3 me-2"></i>${news.crawler_type === 'basic' ? '基础爬虫' : '高级爬虫'}
+                        ${news.sentiment_score !== null ? `<span class="ms-3 ${sentimentClass}"><i class="fas fa-heart me-1"></i>${sentimentText}</span>` : ''}
+                        ${news.word_count ? `<span class="ms-3 text-muted"><i class="fas fa-file-alt me-1"></i>${news.word_count}字</span>` : ''}
+                    </div>
+                    <p class="news-summary">${news.summary || '暂无摘要'}</p>
+                    ${news.keywords ? `<div class="mt-2"><small class="text-muted"><i class="fas fa-tags me-1"></i>${news.keywords}</small></div>` : ''}
+                `;
+                
+                container.appendChild(newsItem);
+            });
+        }
+
+        // 获取情感分析样式类
+        function getSentimentClass(score) {
+            if (score > 0.1) return 'sentiment-positive';
+            if (score < -0.1) return 'sentiment-negative';
+            return 'sentiment-neutral';
+        }
+
+        // 获取情感分析文本
+        function getSentimentText(score) {
+            if (score > 0.1) return '正面';
+            if (score < -0.1) return '负面';
+            return '中性';
+        }
+
+        // 过滤新闻
+        function filterNews() {
+            loadNews(true);
+        }
+
+        // 加载更多新闻
+        function loadMoreNews() {
+            loadNews(false);
+        }
+
+        // 导出数据
+        function exportData() {
+            showAlert('数据导出功能开发中...', 'info');
+        }
+
+        // 显示提示信息
+        function showAlert(message, type) {
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type} alert-dismissible fade show alert-custom`;
+            alertDiv.innerHTML = `
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            `;
+            
+            document.body.insertBefore(alertDiv, document.body.firstChild);
+            
+            // 3秒后自动消失
+            setTimeout(() => {
+                if (alertDiv.parentNode) {
+                    alertDiv.remove();
+                }
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
